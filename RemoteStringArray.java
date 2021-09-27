@@ -1,11 +1,25 @@
+import java.util.ArrayList;
+import java.lang.Exception;
+
+
 public class RemoteStringArray {
+
+    private ArrayList<Integer> writeLocks;
+    private ArrayList<Integer> readLocks;
+    private ArrayList<String> array;
+
+    boolean isLocked(Integer i) {
+        return !(readLocks.get(i) == -1 && writeLocks.get(i) == -1);
+    }
 	
     /** This constructor creates an object with a string array capacity of n
      *
      *  @param n The capacity of the string array
      */
-	RemoteStringArray(int n) {
-		throw new UnsupportedOperationException();
+	RemoteStringArray(Integer n) {
+        readLocks = new ArrayList<Integer>(n);
+        writeLocks = new ArrayList<Integer>(n);
+        array = new ArrayList<String>(n);
 	};
 	
     /** Inserts str as the lth element of the string array. You can assume that
@@ -14,7 +28,7 @@ public class RemoteStringArray {
      * @param l   The index to insert the element to
      * @param str The string to be inserted
      */
-	void insertArrayElement(int l, String str) {
+	void insertArrayElement(Integer l, String str) {
 		throw new UnsupportedOperationException();
 	}
 	
@@ -26,8 +40,12 @@ public class RemoteStringArray {
      * @param client_id Identifier for the client requesting a read lock
      * @return          True if the lock is granted, false otherwise
      */
-	boolean requestReadLock(int l, int client_id) {
-		throw new UnsupportedOperationException();
+	boolean requestReadLock(Integer l, Integer client_id) {
+        if (!isLocked(l)) {
+            readLocks.set(l, client_id); 
+            return true;
+        }
+        return false;
 	}
 
     /** Request write lock on lth element of the array. client_id indicates the
@@ -38,8 +56,12 @@ public class RemoteStringArray {
      * @param client_id Identifier for the client requesting a write lock
      * @return          True if the lock is granted, false otherwise
      */
-	boolean requestWriteLock(int l, int client_id) {
-		throw new UnsupportedOperationException();
+	boolean requestWriteLock(Integer l, Integer client_id) {
+        if (!isLocked(l)) {
+            writeLocks.set(l, client_id); 
+            return true;
+        }
+        return false;
 	}
 	
     /**  Release the read/write lock on lth element. client_id indicates the
@@ -49,8 +71,13 @@ public class RemoteStringArray {
      * @param l         Index to release the lock on
      * @param client_id Id of client requesting release
      */
-	void releaseLock(int l, int client_id) {
-		throw new UnsupportedOperationException();
+	void releaseLock(Integer l, Integer client_id) {
+        if(readLocks.get(l) == client_id) {
+            readLocks.set(l, -1);
+        }
+        if(writeLocks.get(l) == client_id) {
+            readLocks.set(l, -1);
+        }
 	}
 	
     /** Returns the String at the lth location in the read-only mode. Depending
@@ -64,8 +91,11 @@ public class RemoteStringArray {
      * granted
      * @param client_id Id of the client requesting access
      */
-	String fetchElementRead(int l, int client_id) {
-		throw new UnsupportedOperationException();
+	String fetchElementRead(Integer l, Integer client_id) throws Exception {
+        if (readLocks.get(l) != client_id) {
+            throw new Exception("Element could not be fetched since the client does not have a read lock."); 
+        }
+        return array.get(l);
 	}
 	
     /** Returns the String at the lth location in the read/write mode. Analogous
@@ -75,8 +105,11 @@ public class RemoteStringArray {
      * granted
      * @param client_id Id of the client requesting access
      */
-	String fetchElementWrite(int l, int client_id) {
-		throw new UnsupportedOperationException();
+	String fetchElementWrite(Integer l, Integer client_id) throws Exception {
+        if (writeLocks.get(l) != client_id) {
+            throw new Exception("Element could not be fetched since the client does not have a write lock."); 
+        }
+        return array.get(l);
 	}
 	
     /** Copies str into the lth position only if client (indicated by client_id)
@@ -87,8 +120,12 @@ public class RemoteStringArray {
      * @param l         Index being written to
      * @param client_id Id of client writing back to server
      */
-	boolean writeBackElement(String str, int l, int client_id) {
-		throw new UnsupportedOperationException();
+	boolean writeBackElement(String str, Integer l, Integer client_id) {
+        if (writeLocks.get(l) == client_id) {
+            array.set(l, str);
+            return true;
+        }
+        return false;
 	}
 
     public static void main(String[] args) throws Exception {
