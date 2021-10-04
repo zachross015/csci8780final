@@ -1,4 +1,7 @@
+import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.lang.Exception;
 
 import java.rmi.RemoteException;
@@ -9,12 +12,24 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class RSAEngine implements RemoteStringArray {
 
-    private ArrayList<Integer> writeLocks;
-    private ArrayList<Integer> readLocks;
-    private ArrayList<String> array;
+    private List<Integer> writeLocks;
+    private List<Set<Integer>> readLocks;
+    private List<String> array;
 
-    private boolean isLocked(Integer i) {
-        return !(readLocks.get(i) == -1 && writeLocks.get(i) == -1);
+    private boolean isWriteLocked(Integer i) {
+        return !(writeLocks.get(i) == -1);
+    }
+
+    private void insertReadLock(Integer i, Integer client_id) {
+        Set<Integer> locks = readLocks.get(i);
+        locks.add(client_id);
+        readLocks.set(i, locks); 
+    }
+
+    private void removeReadLock(Integer i, Integer client_id) {
+        Set<Integer> locks = readLocks.get(i);
+        locks.remove(client_id);
+        readLocks.set(i, locks); 
     }
 	
     /** This constructor creates an object with a string array capacity of n
@@ -22,7 +37,7 @@ public class RSAEngine implements RemoteStringArray {
      *  @param n The capacity of the string array
      */
 	public RSAEngine(Integer n) {
-        readLocks = new ArrayList<Integer>(n);
+        readLocks = new ArrayList<Set<Integer>>(n);
         writeLocks = new ArrayList<Integer>(n);
         array = new ArrayList<String>(n);
 	};
@@ -46,8 +61,8 @@ public class RSAEngine implements RemoteStringArray {
      * @return          True if the lock is granted, false otherwise
      */
 	public boolean requestReadLock(Integer l, Integer client_id) throws RemoteException{
-        if (!isLocked(l)) {
-            readLocks.set(l, client_id); 
+        if (!isWriteLocked(l)) {
+            insertReadLock(l, client_id);
             return true;
         }
         return false;
@@ -62,7 +77,7 @@ public class RSAEngine implements RemoteStringArray {
      * @return          True if the lock is granted, false otherwise
      */
 	public boolean requestWriteLock(Integer l, Integer client_id) throws RemoteException{
-        if (!isLocked(l)) {
+        if (!isWriteLocked(l)) {
             writeLocks.set(l, client_id); 
             return true;
         }
@@ -77,11 +92,11 @@ public class RSAEngine implements RemoteStringArray {
      * @param client_id Id of client requesting release
      */
 	public void releaseLock(Integer l, Integer client_id) throws RemoteException {
-        if(readLocks.get(l) == client_id) {
-            readLocks.set(l, -1);
+        if(readLocks.get(l).contains(client_id)) {
+            removeReadLock(l, client_id);
         }
         if(writeLocks.get(l) == client_id) {
-            readLocks.set(l, -1);
+            writeLocks.set(l, -1);
         }
 	}
 	
@@ -97,7 +112,7 @@ public class RSAEngine implements RemoteStringArray {
      * @param client_id Id of the client requesting access
      */
 	public String fetchElementRead(Integer l, Integer client_id) throws RemoteException {
-        if (readLocks.get(l) != client_id) {
+        if (!readLocks.get(l).contains(client_id)) {
             throw new RemoteException("Element could not be fetched since the client does not have a read lock."); 
         }
         return array.get(l);
