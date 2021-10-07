@@ -1,8 +1,11 @@
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.lang.Exception;
+import java.io.BufferedReader;
+import java.io.FileReader;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -182,13 +185,20 @@ public class RSAEngine implements RemoteStringArray {
     public static void main(String[] args) throws Exception {
 
         if (args.length < 1) {
-            //throw new Exception("No configuration file was given to the server."); 
+            throw new Exception("No configuration file was given to the server."); 
         }
 
-        String name = "RSA";
+        BufferedReader br = new BufferedReader(new FileReader(args[0]));
 
-        RSAEngine rsae = new RSAEngine(10);
-        Integer port = 0; // Set to 0 for an anonymous port
+        String name = br.readLine();
+        Integer cap = Integer.parseInt(br.readLine());
+        List<String> initialStrings = Arrays.asList(br.readLine().split("\\s+"));
+        Integer port = Integer.parseInt(br.readLine());
+
+        RSAEngine rsae = new RSAEngine(cap);
+        for (int i = 0; i < initialStrings.size(); i++) {
+            rsae.array.set(i, initialStrings.get(i));
+        }
 
         //System.setProperty("java.rmi.server.hostname", "192.168.1.2");
         RemoteStringArray stub = (RemoteStringArray) UnicastRemoteObject.exportObject(rsae, port);
