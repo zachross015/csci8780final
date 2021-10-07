@@ -16,7 +16,8 @@ public class RSAEngine implements RemoteStringArray {
     private List<Set<Integer>> readLocks;
     private List<String> array;
     private Integer capacity=0;
-
+	static Registry registry=null;
+	
     private boolean isWriteLocked(Integer i) {
         return !(writeLocks.get(i) == -1);
     }
@@ -44,8 +45,7 @@ public class RSAEngine implements RemoteStringArray {
         capacity=n;
         
         // Populate initial arrays for read stability
-        while (readLocks.size()<n) {
-        	readLocks.add(-1);
+        while (writeLocks.size()<n) {
         	writeLocks.add(-1);
         	array.add("");
         }
