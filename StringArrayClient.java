@@ -76,7 +76,7 @@ public class StringArrayClient {
 	    	 StringArrayClient client = new StringArrayClient(0);
 	         
 	    	 // Getting the registry 
-	         Registry registry = LocateRegistry.getRegistry(null); 
+	         Registry registry = LocateRegistry.getRegistry(); 
 	    
 	         // Looking up the registry for the remote object 
 	         stub = (RemoteStringArray) registry.lookup("RSA"); 
