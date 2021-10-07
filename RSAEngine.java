@@ -135,7 +135,7 @@ public class RSAEngine implements RemoteStringArray {
      * @param client_id Id of the client requesting access
      */
     public String fetchElementRead(Integer l, Integer client_id) throws RemoteException {
-        if (!readLocks.get(l).contains(client_id)) {
+        if (!readLocks.get(l).contains(client_id) && !writeLocks.get(l).equals(client_id)) {
             throw new RemoteException("Element could not be fetched since the client does not have a read lock."); 
         }
         return array.get(l);
@@ -188,7 +188,7 @@ public class RSAEngine implements RemoteStringArray {
         String name = "RSA";
 
         RSAEngine rsae = new RSAEngine(10);
-        Integer port = 8080; // Set to 0 for an anonymous port
+        Integer port = 0; // Set to 0 for an anonymous port
 
         //System.setProperty("java.rmi.server.hostname", "192.168.1.2");
         RemoteStringArray stub = (RemoteStringArray) UnicastRemoteObject.exportObject(rsae, port);
