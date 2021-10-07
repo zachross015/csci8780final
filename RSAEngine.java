@@ -12,8 +12,10 @@ public class RSAEngine implements RemoteStringArray {
     private ArrayList<Integer> writeLocks;
     private ArrayList<Integer> readLocks;
     private ArrayList<String> array;
+    private Integer capacity=0;
+    static Registry registry = null;
 
-    private boolean isLocked(Integer i) {
+    boolean isLocked(Integer i) {
         return !(readLocks.get(i) == -1 && writeLocks.get(i) == -1);
     }
 	
@@ -22,9 +24,17 @@ public class RSAEngine implements RemoteStringArray {
      *  @param n The capacity of the string array
      */
 	public RSAEngine(Integer n) {
-        readLocks = new ArrayList<Integer>(n);
+        readLocks = new ArrayList<Integer>(n);        
         writeLocks = new ArrayList<Integer>(n);
         array = new ArrayList<String>(n);
+        capacity=n;
+        
+        // Populate initial arrays for read stability
+        while (readLocks.size()<n) {
+        	readLocks.add(-1);
+        	writeLocks.add(-1);
+        	array.add("");
+        }
 	};
 	
     /** Inserts str as the lth element of the string array. You can assume that
@@ -34,12 +44,13 @@ public class RSAEngine implements RemoteStringArray {
      * @param str The string to be inserted
      */
 	public void insertArrayElement(Integer l, String str) throws RemoteException {
-		throw new UnsupportedOperationException();
+		array.add(l, str);
+		return;
 	}
 	
     /** Request read lock on lth element of the array. client_id indicates the
-     * identifier of the client requesting the lock. Return “true” if lock is
-     * granted and “false” otherwise.
+     * identifier of the client requesting the lock. Return true if lock is
+     * granted and false otherwise.
      *
      * @param l         The index of the array to request a read lock on 
      * @param client_id Identifier for the client requesting a read lock
@@ -54,8 +65,8 @@ public class RSAEngine implements RemoteStringArray {
 	}
 
     /** Request write lock on lth element of the array. client_id indicates the
-     * identifier of the client requesting the lock. Return “true” if lock is
-     * granted and “false” otherwise.
+     * identifier of the client requesting the lock. Return true if lock is
+     * granted and false otherwise.
      *
      * @param l         The index of the array to request a write lock on 
      * @param client_id Identifier for the client requesting a write lock
@@ -83,6 +94,7 @@ public class RSAEngine implements RemoteStringArray {
         if(writeLocks.get(l) == client_id) {
             readLocks.set(l, -1);
         }
+        return;
 	}
 	
     /** Returns the String at the lth location in the read-only mode. Depending
@@ -90,7 +102,7 @@ public class RSAEngine implements RemoteStringArray {
      * a part of this method. Alternately, you can implement a separate method
      * for obtaining the read lock which has to be successfully executed by the
      * client for this method to succeed. Failure can be indicated by raising an
-     * exception or returning a “null” object (design decision left to you).
+     * exception or returning a null object (design decision left to you).
      *
      * @param l         Index of the element which read-only access is being
      * granted
@@ -118,7 +130,7 @@ public class RSAEngine implements RemoteStringArray {
 	}
 	
     /** Copies str into the lth position only if client (indicated by client_id)
-     * has a write lock. Returns “true” if successful and “false” if not
+     * has a write lock. Returns true if successful and false if not
      * successful (e.g., client does not have the write lock). 
      *
      * @param str       String to write back to the server
@@ -133,41 +145,43 @@ public class RSAEngine implements RemoteStringArray {
         return false;
 	}
 
-    public static void main(String[] args) throws Exception {
+    /**
+	 * @return the capacity
+	 */
+	public Integer getCapacity() throws RemoteException {
+		return capacity;
+	}
+
+	public static void main(String[] args) throws Exception {
         
         if (args.length < 1) {
-           throw new Exception("No configuration file was given to the server."); 
+           //throw new Exception("No configuration file was given to the server."); 
         }
 
 
-        try {
 
             String name = "RSA";
 
-            RemoteStringArray rsae = new RSAEngine(10);
-            int port = 0; // Set to 0 for an anonymous port
+            RSAEngine rsae = new RSAEngine(10);
+            Integer port = 0; // Set to 0 for an anonymous port
             
-            System.setProperty("java.rmi.server.hostname", "192.168.1.2");
-            RemoteStringArray stub = (RemoteStringArray) UnicastRemoteObject.exportObject(rsae, port);
 
+            //System.setProperty("java.rmi.server.hostname", "192.168.1.2");
+            RemoteStringArray stub = (RemoteStringArray) UnicastRemoteObject.exportObject(rsae, port);
+            
             // Get an existing registry if it exists at the host:port.
             // Otherwise, create a new one. This is here because I ran into an
             // issue where using getRegistry would result in a error thrown by
             // RMI for trying to attach to a registry that didn't exist.
-            Registry registry;
             try {
                 registry = LocateRegistry.getRegistry();
             } catch (Exception e) {
+            	System.out.println("Failed to locate registry, creating new one");
                 registry = LocateRegistry.createRegistry(port);
             }
-
-            registry.rebind(name, stub);
+            registry.bind(name, stub);
             System.out.println("RSAEngine bound");
-
-        } catch(Exception e) {
-            System.err.println("RSAEngine exception:");
-            e.printStackTrace();
-        }
+            
     
     }
 

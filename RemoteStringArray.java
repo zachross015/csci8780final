@@ -3,6 +3,8 @@ import java.rmi.RemoteException;
 
 
 public interface RemoteStringArray extends Remote {
+	
+	Integer getCapacity() throws RemoteException;
 
     /** Inserts str as the lth element of the string array. You can assume that
      * l is less than the capacity of the String array
@@ -13,8 +15,8 @@ public interface RemoteStringArray extends Remote {
 	void insertArrayElement(Integer l, String str) throws RemoteException; 
 	
     /** Request read lock on lth element of the array. client_id indicates the
-     * identifier of the client requesting the lock. Return “true” if lock is
-     * granted and “false” otherwise.
+     * identifier of the client requesting the lock. Return true if lock is
+     * granted and false otherwise.
      *
      * @param l         The index of the array to request a read lock on 
      * @param client_id Identifier for the client requesting a read lock
@@ -23,8 +25,8 @@ public interface RemoteStringArray extends Remote {
 	boolean requestReadLock(Integer l, Integer client_id) throws RemoteException; 
 
     /** Request write lock on lth element of the array. client_id indicates the
-     * identifier of the client requesting the lock. Return “true” if lock is
-     * granted and “false” otherwise.
+     * identifier of the client requesting the lock. Return true if lock is
+     * granted and fasle otherwise.
      *
      * @param l         The index of the array to request a write lock on 
      * @param client_id Identifier for the client requesting a write lock
@@ -46,7 +48,7 @@ public interface RemoteStringArray extends Remote {
      * a part of this method. Alternately, you can implement a separate method
      * for obtaining the read lock which has to be successfully executed by the
      * client for this method to succeed. Failure can be indicated by raising an
-     * exception or returning a “null” object (design decision left to you).
+     * exception or returning a null object (design decision left to you).
      *
      * @param l         Index of the element which read-only access is being
      * granted
@@ -64,7 +66,7 @@ public interface RemoteStringArray extends Remote {
 	String fetchElementWrite(Integer l, Integer client_id) throws RemoteException; 
 	
     /** Copies str into the lth position only if client (indicated by client_id)
-     * has a write lock. Returns “true” if successful and “false” if not
+     * has a write lock. Returns true if successful and false if not
      * successful (e.g., client does not have the write lock). 
      *
      * @param str       String to write back to the server
