@@ -20,7 +20,6 @@ public class StringArrayClient {
 			System.out.println(stub.getCapacity());
 		} catch (RemoteException e) {
 			System.out.println("Failure to get array capacity");
-			e.printStackTrace();
 		}
 	}
 
@@ -34,7 +33,6 @@ public class StringArrayClient {
 			this.element = stub.fetchElementRead(i, this.client_id);
 			System.out.println("Success to fetch element in R mode");
 		} catch (RemoteException e) {
-			e.printStackTrace();
 			System.out.println("Failure to fetch element in R mode");
 		}
 	}
@@ -42,10 +40,10 @@ public class StringArrayClient {
 	void fetchElementWrite(int i) {
 		try {
 			stub.requestWriteLock(i, this.client_id);
+			stub.requestReadLock(i, this.client_id);
 			this.element = stub.fetchElementWrite(i, this.client_id);
 			System.out.println("Success in fetching element in R/W mode");
 		} catch (RemoteException e) {
-			e.printStackTrace();
 			System.out.println("Failure to fetch element in R/W mode");
 		}
 	}
@@ -67,7 +65,6 @@ public class StringArrayClient {
 				System.out.println("Writeback failed");
 			}
 		} catch (RemoteException e) {
-			e.printStackTrace();
 			System.out.println("Failure to writeback");
 		}
 	}
@@ -79,7 +76,6 @@ public class StringArrayClient {
 			this.mutated_element=null;
 		} catch (RemoteException e) {
 			System.out.println("Failed to release lock -- check server connection");
-			e.printStackTrace();
 		}
 	}
 

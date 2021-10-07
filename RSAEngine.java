@@ -80,11 +80,11 @@ public class RSAEngine implements RemoteStringArray {
      */
     public boolean requestReadLock(Integer l, Integer client_id) throws RemoteException{
         System.out.println("Requesting read lock for client " + client_id);
-        if (!isWriteLocked(l)) {
+        if (!isWriteLocked(l) || writeLocks.get(l).equals(client_id)) {
             insertReadLock(l, client_id);
             System.out.println("Read lock granted.");
             return true;
-        }
+		}
         return false;
     }
 
@@ -168,7 +168,7 @@ public class RSAEngine implements RemoteStringArray {
      * @param client_id Id of client writing back to server
      */
     public boolean writeBackElement(String str, Integer l, Integer client_id) throws RemoteException {
-        if (writeLocks.get(l) == client_id) {
+        if (writeLocks.get(l).equals(client_id)) {
             array.set(l, str);
             return true;
         }
