@@ -119,7 +119,7 @@ public class RSAEngine implements RemoteStringArray {
             removeReadLock(l, client_id);
             System.out.println("Read lock removed.");
         }
-        if(writeLocks.get(l) == client_id) {
+        if(writeLocks.get(l).equals(client_id)) {
             writeLocks.set(l, -1);
             System.out.println("Write lock removed.");
         }
