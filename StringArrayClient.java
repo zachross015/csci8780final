@@ -1,6 +1,9 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry; 
 import java.rmi.registry.Registry;  
+import java.util.Scanner;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 public class StringArrayClient {
 	static RemoteStringArray stub = null;
@@ -72,50 +75,60 @@ public class StringArrayClient {
 	}
 
    public static void main(String[] args) {  
-	      try {  
-	    	 StringArrayClient client = new StringArrayClient(0);
-	         
-	    	 // Getting the registry 
-	         Registry registry = LocateRegistry.getRegistry(); 
-	    
-	         // Looking up the registry for the remote object 
-	         stub = (RemoteStringArray) registry.lookup("RSA"); 
-	    
-	         // Small suite of debug tests
-	         int index=0;
-	         client.getArrayCapacity();
-	         client.fetchElementRead(index);
-	         client.printElement(index);
-	         client.releaseLock(index);
 
-	         client.fetchElementWrite(index);
-	         client.concatenate("test", index);
-	         client.releaseLock(index);
+	   try {  
+		 File file = new File(args[0]);
+		 Scanner scan;
+		 scan = new Scanner(file);
+		 String name= scan.nextLine();
+		 System.out.println(name);
+		 //String host= scan.next();
+		 int _client_id=Integer.parseInt(scan.nextLine());
+		 System.out.println(_client_id);
+		 scan.close();
+    	 StringArrayClient client = new StringArrayClient(_client_id);
+         
+    	 // Getting the registry 
+         Registry registry = LocateRegistry.getRegistry(null); 
+    
+         // Looking up the registry for the remote object 
+         stub = (RemoteStringArray) registry.lookup(name); 
+    
+         // Small suite of debug tests
+         int index=0;
+         client.getArrayCapacity();
+         client.fetchElementRead(index);
+         client.printElement(index);
+         client.releaseLock(index);
 
-	         client.fetchElementRead(index);
-	         client.printElement(index);
-	         client.releaseLock(index);
+         client.fetchElementWrite(index);
+         client.concatenate("test", index);
+         client.releaseLock(index);
 
-	         client.fetchElementWrite(index+1);
-	         client.element="Second test";
-	         client.writeback(index+1);
-	         client.releaseLock(index+1);
+         client.fetchElementRead(index);
+         client.printElement(index);
+         client.releaseLock(index);
 
-	         client.fetchElementRead(index+1);
-	         client.printElement(index+1);
-	         client.releaseLock(index+1);
+         client.fetchElementWrite(index+1);
+         client.element="Second test";
+         client.writeback(index+1);
+         client.releaseLock(index+1);
 
-	         client.getArrayCapacity();
-	         
-	         //stub.insertArrayElement(9, "test");
-	         //System.out.println(stub.fetchElementRead(9,1));
+         client.fetchElementRead(index+1);
+         client.printElement(index+1);
+         client.releaseLock(index+1);
 
-	         System.out.println("Remote method invoked"); 
-	      } catch (Exception e) {
-	         System.err.println("Client exception: " + e.toString()); 
-	         e.printStackTrace(); 
-	      } 
-	   } 
+         client.getArrayCapacity();
+         
+         //stub.insertArrayElement(9, "test");
+         //System.out.println(stub.fetchElementRead(9,1));
+
+         System.out.println("Remote method invoked"); 
+      } catch (Exception e) {
+         System.err.println("Client exception: " + e.toString()); 
+         e.printStackTrace(); 
+      } 
+   } 
 	
 	
 }
