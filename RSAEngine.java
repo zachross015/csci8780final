@@ -25,6 +25,10 @@ public class RSAEngine implements RemoteStringArray {
         return !(writeLocks.get(i) == -1);
     }
 
+    private boolean isReadLocked(Integer i) {
+        return !(readLocks.get(i).isEmpty());
+    }
+
     private void insertReadLock(Integer i, Integer client_id) {
         if (readLocks.get(i).contains(client_id)) {
            return; 
@@ -98,7 +102,7 @@ public class RSAEngine implements RemoteStringArray {
      */
     public boolean requestWriteLock(Integer l, Integer client_id) throws RemoteException{
         System.out.println("Requesting write lock for client " + client_id);
-        if (!isWriteLocked(l)) {
+        if (!isWriteLocked(l) && !isReadLocked(l)) {
             writeLocks.set(l, client_id); 
             System.out.println("Write lock granted.");
             return true;

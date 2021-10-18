@@ -55,6 +55,7 @@ public class StringArrayClient {
 	void concatenate(String str, int i) {
 		this.mutated_element = this.element + str;
 		this.writeback(i);
+        this.element = this.mutated_element;
 	}
 
 	void writeback(int i) {
