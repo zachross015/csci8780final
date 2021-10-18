@@ -55,13 +55,13 @@ public class StringArrayClient {
 	void concatenate(String str, int i) {
 		this.mutated_element = this.element + str;
 		this.writeback(i);
-        this.element = this.mutated_element;
 	}
 
 	void writeback(int i) {
 		try {
 			if(stub.writeBackElement(this.mutated_element, i, this.client_id)){
 				System.out.println("Writeback successful");
+                this.element = this.mutated_element;
 			}else{
 				System.out.println("Writeback failed");
 			}
