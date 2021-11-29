@@ -9,18 +9,10 @@ public interface RemoteStringArrayLeader extends Remote {
      */
 	Integer getCapacity() throws RemoteException;
 
-    /** Requests a write lock from the leader. Write lock is granted following
-     * the concurrency controls given in the Spanner paper.
-     */
-	boolean requestWriteLock(Integer l, Integer clientId, long time) throws RemoteException; 
-	
-    /** Releases a lock on an element in the distributed storage array.
-     */
-	void releaseLock(Integer l, Integer clientId, long time) throws RemoteException; 
-	
-    String get(Integer i, Integer clientId) throws RemoteException;
 
-    void set(Integer i, String value, Integer clientId) throws RemoteException;
+    String get(Integer i, Integer clientId, LongStream range) throws RemoteException;
+
+    void set(Integer i, String value, Integer clientId, LongStream range) throws RemoteException;
 	
     /** Binds a RemoteStringArray to this leader.
      */
@@ -29,6 +21,10 @@ public interface RemoteStringArrayLeader extends Remote {
     /** Unbinds a RemoteStringArray from this leader.
      */
     void unbind(String name) throws RemoteException;
+
+    void requestWriteLock(Integer i, Integer clientId, LongStream range) throws RemoteException;
+
+    void releaseLock(Integer i, Integer clientId, LongStream range) throws RemoteException;
 
 }
 

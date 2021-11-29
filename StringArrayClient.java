@@ -20,7 +20,7 @@ public class StringArrayClient {
 	private String element = null;
 	private String mutated_element = null;
 
-    private Integer lastError = 0;
+    private long lastError = 0;
 
 
 	public StringArrayClient(ClientConfig cConfig, HyperParameterConfig hConfig) throws Exception {
@@ -42,12 +42,12 @@ public class StringArrayClient {
 		}
 	}
 
-    long displacedTime() {
+    LongStream displacedTime() {
         long unixTime = System.currentTimeMillis();
-        Integer error = lastError + (int) (hConfig.getGamma() * Util.bernoulli(hConfig.getProbability()));
-        unixTime += error;
+        long error = lastError + (hConfig.getGamma() * Util.bernoulli(hConfig.getProbability()));
+        LongStream tt = LongStream.range(unixTime - error, unixTime + error);
         lastError = error;
-        return unixTime;
+        return tt;
     }
 
 	void fetchElementRead(int i) {
