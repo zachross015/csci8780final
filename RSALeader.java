@@ -52,19 +52,6 @@ public class RSALeader implements RemoteStringArray {
         return capacity;
     }
 
-    Tuple<RemoteStringArray, Integer> fetchRemoteStringArray(Integer i, Integer clientId) throws RemoteException, Exception {
-        if (!this.isWriteLocked(i) || this.hasWriteLock(i, clientId)) {
-            Integer j = i;
-            for (Integer k = 0; k < boundRSAs.size(); k++) {
-                Integer n = boundRSAs.get(k).second.getCapacity();
-                if (j - n < 0) {
-                   return new Tuple(boundRSAs.get(k).second, j); 
-                }
-                j -= n;
-            }
-        } 
-        throw new RemoteException("Failed to fetch remote string array: element is write locked.");
-    }
 
     public static void main(String[] args) throws Exception {
 

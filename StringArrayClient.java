@@ -20,6 +20,8 @@ public class StringArrayClient {
 	private String element = null;
 	private String mutated_element = null;
 
+    private Integer lastError = 0;
+
 
 	public StringArrayClient(ClientConfig cConfig, HyperParameterConfig hConfig) throws Exception {
 
@@ -40,18 +42,17 @@ public class StringArrayClient {
 		}
 	}
 
-    LongStream displacedTimeRange() {
+    long displacedTime() {
         long unixTime = System.currentTimeMillis();
-        Random random = new Random(unixTime);
-        long endingOffset = (random.nextLong() % this.hConfig.getDeltaMS()) + unixTime;
-        long beginningOffset = unixTime - (this.hConfig.getDeltaMS() - endingOffset);
-        return LongStream.range(beginningOffset, endingOffset);
+        Integer error = lastError + (int) (hConfig.getGamma() * Util.bernoulli(hConfig.getProbability()));
+        unixTime += error;
+        lastError = error;
+        return unixTime;
     }
 
 	void fetchElementRead(int i) {
 		try {
-            Tuple<RemoteStringArray, Integer> rsa = this.leaderStub.fetchRemoteStringArray(i, this.cConfig.getId());
-            this.element = rsa.first.get(rsa.second);
+            this.element = this.leaderStub.get(i, this.cConfig.getId());
 			System.out.println("Success to fetch element in R mode");
 		} catch (RemoteException e) {
 			System.out.println("Failure to fetch element in R mode");
@@ -61,9 +62,8 @@ public class StringArrayClient {
 
 	void fetchElementWrite(int i) {
 		try {
-			this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.displacedTimeRange());
-            Tuple<RemoteStringArray, Integer> rsa = this.leaderStub.fetchRemoteStringArray(i, this.cConfig.getId());
-            this.element = rsa.first.get(rsa.second);
+			this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.displacedTime());
+            this.element = this.leaderStub.get(i, this.cConfig.getId());
 			System.out.println("Success to fetch element in R/W mode");
 		} catch (RemoteException e) {
 			System.out.println("Failure to fetch element in R/W mode");
@@ -76,14 +76,14 @@ public class StringArrayClient {
 	}
 
 	void concatenate(String str, int i) {
+        this.fetchElementWrite(i);
 		this.mutated_element = this.element + str;
 		this.writeback(i);
 	}
 
 	void writeback(int i) {
 		try {
-            Tuple<RemoteStringArray, Integer> rsa = this.leaderStub.fetchRemoteStringArray(i, this.cConfig.getId());
-            rsa.first.set(rsa.second, this.mutated_element);
+            this.leaderStub.set(i, this.mutated_element, this.cConfig.getId());
             this.element = this.mutated_element;
 		} catch (RemoteException e) {
 			System.out.println("Failure to writeback");
@@ -92,7 +92,7 @@ public class StringArrayClient {
 
 	void releaseLock(int i) {
 		try {
-			this.leaderStub.releaseLock(i, this.cConfig.getId(), this.displacedTimeRange());
+			this.leaderStub.releaseLock(i, this.cConfig.getId(), this.displacedTime());
 			this.element=null;
 			this.mutated_element=null;
 		} catch (RemoteException e) {

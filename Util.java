@@ -11,4 +11,15 @@ public class Util {
         return p;
     }
 
+    // https://stackoverflow.com/questions/23561551/a-efficient-binomial-random-number-generator-code-in-java
+    public static int bernoulli(double p) {
+        double log_q = Math.log(1.0 - p);
+        if(Math.log(Math.random()) < log_q) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+
 }

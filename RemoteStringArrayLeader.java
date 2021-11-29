@@ -12,17 +12,15 @@ public interface RemoteStringArrayLeader extends Remote {
     /** Requests a write lock from the leader. Write lock is granted following
      * the concurrency controls given in the Spanner paper.
      */
-	boolean requestWriteLock(Integer l, Integer clientId, LongStream timeRange) throws RemoteException; 
+	boolean requestWriteLock(Integer l, Integer clientId, long time) throws RemoteException; 
 	
     /** Releases a lock on an element in the distributed storage array.
      */
-	void releaseLock(Integer l, Integer clientId, LongStream timeRange) throws RemoteException; 
+	void releaseLock(Integer l, Integer clientId, long time) throws RemoteException; 
 	
-    /** Fetches the remote string array for operations if and only if there are
-     * no current write locks on the specified element. When fetched, it returns
-     * the RSA along with the adjusted index of the element within that array.
-     */
-	Tuple<RemoteStringArray, Integer> fetchRemoteStringArray(Integer l, Integer clientId) throws RemoteException; 
+    String get(Integer i, Integer clientId) throws RemoteException;
+
+    void set(Integer i, String value, Integer clientId) throws RemoteException;
 	
     /** Binds a RemoteStringArray to this leader.
      */
