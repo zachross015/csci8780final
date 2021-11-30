@@ -31,9 +31,11 @@ public class RSAServer implements RemoteStringArray {
         this.config = config;
         this.array = new ArrayList<String>(this.config.getCapacity());
         for (int i = 0; i < this.config.getElements().size(); i++) {
-            this.array.set(i, this.config.getElements().get(i)); 
+            this.array.add(this.config.getElements().get(i)); 
         }
-
+        for (int i = 0; i < this.config.getCapacity() - this.config.getElements().size(); i++) {
+            this.array.add("");
+        }
     };
 
     public String get(Integer i) throws RemoteException {
@@ -75,6 +77,7 @@ public class RSAServer implements RemoteStringArray {
         }
         registry.bind(this.config.getName(), stub);
         System.out.println("RSAServer created");
+        System.out.println(Arrays.toString(registry.list()));
 
         RemoteStringArrayLeader leader = (RemoteStringArrayLeader) registry.lookup(this.config.getLeader());
         leader.bind(this.config.getName(), this);
@@ -83,9 +86,12 @@ public class RSAServer implements RemoteStringArray {
 
     public void closeServer() throws RemoteException, NotBoundException {
         Registry registry = LocateRegistry.getRegistry();
+        registry.unbind(this.config.getName());
+        System.out.println("Server unbound from registry");
+
         RemoteStringArrayLeader leader = (RemoteStringArrayLeader) registry.lookup(this.config.getLeader());
         leader.unbind(this.config.getName());
-        registry.unbind(this.config.getName());
+        System.out.println("Server unbound from leader");
     }
 
     public static void main(String[] args) throws Exception {
@@ -96,6 +102,17 @@ public class RSAServer implements RemoteStringArray {
 
         ServerConfig config = new ServerConfig(args[0]);
         RSAServer rsae = new RSAServer(config);
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    rsae.closeServer();
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
         rsae.startServer();
 
     }

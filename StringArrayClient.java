@@ -21,6 +21,8 @@ public class StringArrayClient {
 	private String mutated_element = null;
 
     private long lastError = 0;
+    private long start = 0;
+    private long end = 0;
 
 
 	public StringArrayClient(ClientConfig cConfig, HyperParameterConfig hConfig) throws Exception {
@@ -29,8 +31,8 @@ public class StringArrayClient {
 		this.hConfig = hConfig;
 
         // Getting the registry and leader access
-        Registry registry = LocateRegistry.getRegistry(null);
-        leaderStub = (RemoteStringArrayLeader) this.registry.lookup(this.cConfig.getServer());
+        this.registry = LocateRegistry.getRegistry();
+        this.leaderStub = (RemoteStringArrayLeader) this.registry.lookup(this.cConfig.getServer());
     }
 
 
@@ -38,23 +40,27 @@ public class StringArrayClient {
 		try {
 			System.out.println(this.leaderStub.getCapacity());
 		} catch (RemoteException e) {
+            e.printStackTrace();
 			System.out.println("Failure to get array capacity");
 		}
 	}
 
-    LongStream displacedTime() {
+    void calculateDisplacedTime() {
         long unixTime = System.currentTimeMillis();
         long error = lastError + (hConfig.getGamma() * Util.bernoulli(hConfig.getProbability()));
         LongStream tt = LongStream.range(unixTime - error, unixTime + error);
+        this.start = unixTime - error;
+        this.end = unixTime + error;
         lastError = error;
-        return tt;
     }
 
 	void fetchElementRead(int i) {
 		try {
-            this.element = this.leaderStub.get(i, this.cConfig.getId());
+            this.calculateDisplacedTime();
+            this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
 			System.out.println("Success to fetch element in R mode");
 		} catch (RemoteException e) {
+            e.printStackTrace();
 			System.out.println("Failure to fetch element in R mode");
 		}
 	}
@@ -62,10 +68,12 @@ public class StringArrayClient {
 
 	void fetchElementWrite(int i) {
 		try {
-			this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.displacedTime());
-            this.element = this.leaderStub.get(i, this.cConfig.getId());
+            this.calculateDisplacedTime();
+			this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.start, this.end);
+            this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
 			System.out.println("Success to fetch element in R/W mode");
 		} catch (RemoteException e) {
+            e.printStackTrace();
 			System.out.println("Failure to fetch element in R/W mode");
 		}
 	}
@@ -76,26 +84,29 @@ public class StringArrayClient {
 	}
 
 	void concatenate(String str, int i) {
-        this.fetchElementWrite(i);
 		this.mutated_element = this.element + str;
 		this.writeback(i);
 	}
 
 	void writeback(int i) {
 		try {
-            this.leaderStub.set(i, this.mutated_element, this.cConfig.getId());
+            this.calculateDisplacedTime();
+            this.leaderStub.set(i, this.mutated_element, this.cConfig.getId(), this.start, this.end);
             this.element = this.mutated_element;
 		} catch (RemoteException e) {
+            e.printStackTrace();
 			System.out.println("Failure to writeback");
 		}
 	}
 
 	void releaseLock(int i) {
 		try {
-			this.leaderStub.releaseLock(i, this.cConfig.getId(), this.displacedTime());
+            this.calculateDisplacedTime();
+			this.leaderStub.releaseLock(i, this.cConfig.getId(), this.start, this.end);
 			this.element=null;
 			this.mutated_element=null;
 		} catch (RemoteException e) {
+            e.printStackTrace();
 			System.out.println("Failed to release lock -- check server connection");
 		}
 	}
@@ -139,7 +150,7 @@ public class StringArrayClient {
                 this.releaseLock(Integer.parseInt(commands[1]));
                 break;
             case "quit":
-                return false;
+                return true;
             default:
                 System.out.println("Command not found. Available commands are:");
                 System.out.println("capacity    - Prints the capacity of the distributed string array.");
@@ -148,7 +159,7 @@ public class StringArrayClient {
                 System.out.println("release     - Releases the lock for the element at the given index.");
                 System.out.println("concatenate - Appends the given value to the value at the given index.");
         }
-        return true;
+        return false;
     }
 
 
@@ -168,8 +179,14 @@ public class StringArrayClient {
             StringArrayClient arrClient = new StringArrayClient(clientConfig, hpConfig);
 
 			Scanner input = new Scanner(System.in);
-			String line = input.nextLine();
+			String line;
             Boolean terminated = false;
+            System.out.println("Available commands are:");
+            System.out.println("capacity    - Prints the capacity of the distributed string array.");
+            System.out.println("print       - Reads and prints the element at the given index.");
+            System.out.println("lock        - Locks the element at the given index for writing.");
+            System.out.println("release     - Releases the lock for the element at the given index.");
+            System.out.println("concatenate - Appends the given value to the value at the given index.");
 			while (!terminated) {
 				line = input.nextLine();
                 terminated = arrClient.handleInput(line);

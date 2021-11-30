@@ -10,9 +10,9 @@ public interface RemoteStringArrayLeader extends Remote {
 	Integer getCapacity() throws RemoteException;
 
 
-    String get(Integer i, Integer clientId, LongStream range) throws RemoteException;
+    String get(Integer i, Integer clientId, Long start, Long end) throws RemoteException;
 
-    void set(Integer i, String value, Integer clientId, LongStream range) throws RemoteException;
+    void set(Integer i, String value, Integer clientId, Long start, Long end) throws RemoteException;
 	
     /** Binds a RemoteStringArray to this leader.
      */
@@ -22,9 +22,9 @@ public interface RemoteStringArrayLeader extends Remote {
      */
     void unbind(String name) throws RemoteException;
 
-    void requestWriteLock(Integer i, Integer clientId, LongStream range) throws RemoteException;
+    void requestWriteLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException;
 
-    void releaseLock(Integer i, Integer clientId, LongStream range) throws RemoteException;
+    void releaseLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException;
 
 }
 

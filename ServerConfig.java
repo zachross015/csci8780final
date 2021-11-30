@@ -18,6 +18,13 @@ public class ServerConfig {
         this.setElements(Arrays.asList(p.getProperty("server.elements").split(" ")));
         this.setPort(Integer.parseInt(p.getProperty("server.port")));
         this.setLeader(p.getProperty("server.leader"));
+
+        System.out.println("Server Configuration Initialized");
+        System.out.println("Name: " + this.getName());
+        System.out.println("Capacity: " + this.getCapacity());
+        System.out.println("Elements: " + Arrays.toString(elements.toArray()));
+        System.out.println("Port: " + this.getPort());
+        System.out.println("Leader: " + this.getLeader());
     }
 
     public void setName(String name) {

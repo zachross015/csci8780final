@@ -3,13 +3,13 @@ import java.util.Properties;
 public class HyperParameterConfig {
 
     private Float probability;
-    private Float gamma;
+    private Long gamma;
     private Long deltams;
 
     public HyperParameterConfig(String filename) throws Exception {
         Properties p = Util.loadPropertiesFromFile(filename);
         this.setProbability(Float.parseFloat(p.getProperty("hp.probability")));
-        this.setGamma(Float.parseFloat(p.getProperty("hp.gamma")));
+        this.setGamma(Long.parseLong(p.getProperty("hp.gamma")));
         this.setDeltaMS(Long.parseLong(p.getProperty("hp.deltams")));
     }
 
@@ -22,11 +22,11 @@ public class HyperParameterConfig {
         return this.probability;
     }
 
-    public void setGamma(Float gamma) {
+    public void setGamma(Long gamma) {
         this.gamma = gamma;
     }
 
-    public Float getGamma() {
+    public Long getGamma() {
         return this.gamma;
     }
 

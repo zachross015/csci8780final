@@ -11,6 +11,10 @@ public class LeaderConfig {
         Properties p = Util.loadPropertiesFromFile(filename);
         this.setName(p.getProperty("leader.name"));
         this.setPort(Integer.parseInt(p.getProperty("leader.port")));
+
+        System.out.println("Leader Configuration Initialized");
+        System.out.println("Name: " + this.getName());
+        System.out.println("Port: " + this.getPort());
     }
 
     public void setName(String name) {

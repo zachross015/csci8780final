@@ -8,56 +8,79 @@ import java.io.FileReader;
 import java.util.stream.LongStream;
 
 import java.rmi.RemoteException;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 
 
-public class RSALeader implements RemoteStringArray {
+public class RSALeader implements RemoteStringArrayLeader {
 
+    LeaderConfig config;
 
     List<Tuple<String, RemoteStringArray>> boundRSAs;    
     List<List<Integer>> locks;
-    List<List<LongStream>> uncertaintyLocks;
+    List<List<Long>> uncertaintyLocks;
 
-    private isLocked(Integer i, Integer clientId) {
-        Tuple ij = this.getRSAIndices(i);
-        return locks.get(ij.first).get(ij.second) == clientId;
-    }
-
-    private isUncertaintyLocked(Integer i, LongStream range) {
-        Tuple ij = this.getRSAIndices(i);
-        LongStream ul = uncertaintyLocks.get(ij.first).get(ij.second);
-        return range.min().getAsLong() < uncertaintyLocks.max().getAsLong();
-    }
-
-    private Boolean isWriteLocked(Integer i, Integer clientId, LongStream range) {
-        return isLocked(i, clientId) || isUncertaintyLocked(i, range);
-    }
-
-    public void requestWriteLock(Integer i, Integer clientId, LongStream range) throws RemoteException {
-        Tuple ij = this.getRSAIndices(i);
+    private Boolean isUnlockedForClient(Integer i, Integer clientId) throws Exception {
+        Tuple<Integer, Integer> ij = this.getRSAIndices(i);
         Integer lock = locks.get(ij.first).get(ij.second);
-        if(lock != -1 && lock != clientId) {
-            throw new RemoteException("Unable to grant RW lock: another client already has a lock on this element.");
-        } else if(isUncertaintyLocked(i, range)) {
-            throw new RemoteException("Unable to grant RW lock: time range is within the current uncertainty.");
-        }
-        uncertaintyLocks.get(ij.first).set(ij.second, range);
-        locks.get(ij.first).set(ij.second, clientId);
-        System.out.println("Lock granted for client " + clientId);
+        return lock.equals(clientId) || lock.equals(-1);
     }
 
-    public void releaseLock(Integer i, Integer clientId) throws RemoteException {
-        Tuple ij = this.getRSAIndices(i);
-        if(locks.get(ij.first).get(ij.second) != clientId) {
-            throw new RemoteException("Unable to release lock: client was not locked to this in the first place.");
+    private Boolean isUncertaintyLocked(Integer i, Long start) throws Exception {
+        Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+        Long ul = uncertaintyLocks.get(ij.first).get(ij.second);
+        return start.compareTo(ul) < 0;
+    }
+
+    public void requestWriteLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException {
+        try {
+            Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+            Integer lock = locks.get(ij.first).get(ij.second);
+            if(isUnlockedForClient(i, clientId) && !lock.equals(-1)) {
+                throw new RemoteException("Unable to grant RW lock: another client already has a lock on this element.");
+            } else if(isUncertaintyLocked(i, start)) {
+                throw new RemoteException("Unable to grant RW lock: time range is within the current uncertainty.");
+            }
+            uncertaintyLocks.get(ij.first).set(ij.second, end);
+            locks.get(ij.first).set(ij.second, clientId);
+            System.out.println("Lock granted for index " + i + ". Timestamp: [" + start + " " + end + "]");
+        } catch(Exception e) {
+            throw new RemoteException("Error occurred when attempting to grant RW lock.");
         }
-        locks.get(ij.first).set(ij.second, -1);
+    }
+
+    public void releaseLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException {
+        try {
+            Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+            if(!locks.get(ij.first).get(ij.second).equals(clientId)) {
+                throw new RemoteException("Unable to release lock: client was not locked to this in the first place.");
+            }
+            uncertaintyLocks.get(ij.first).set(ij.second, end);
+            locks.get(ij.first).set(ij.second, -1);
+            System.out.println("Lock released for index " + i + ". Timestamp: [" + start + " " + end + "]");
+        } catch(Exception e) {
+            throw new RemoteException("Error occurred when attempting to release RW lock.");
+        }
     }
 
     public void bind(String name, RemoteStringArray rsa) throws RemoteException {
-        boundRSAs.add(new Tuple(name, rsa)); 
+        Tuple<String, RemoteStringArray> item = new Tuple<String, RemoteStringArray>(name, rsa);
+
+        boundRSAs.add(item); 
+        Integer n = item.second.getCapacity();
+        List<Integer> inLocks = new ArrayList<Integer>(n);
+        List<Long> inUncertaintyLocks = new ArrayList<Long>(n);
+        for (int i = 0; i < n; i++) {
+            inLocks.add(-1);
+            inUncertaintyLocks.add(new Long(0)); 
+        }
+        locks.add(inLocks);
+        uncertaintyLocks.add(inUncertaintyLocks);
+
+        System.out.println(name + " successfully bound.");
     }
 
 
@@ -87,13 +110,13 @@ public class RSALeader implements RemoteStringArray {
     }
 
 
-    private Tuple<Integer, Integer> getRSAIndices(Integer j) throws Exception {
-        Integer k = 0;
+    private Tuple<Integer, Integer> getRSAIndices(int j) throws Exception {
+        int k = 0;
         for (int i = 0; i < boundRSAs.size(); i++) {
             RemoteStringArray elem = boundRSAs.get(i).second;
-            Integer n = elem.getCapacity(); 
+            int n = elem.getCapacity(); 
             if(j < n) {
-                return Tuple(k, j);
+                return new Tuple<Integer, Integer>(k, j);
             }
             j -= n;
             k++;
@@ -101,35 +124,98 @@ public class RSALeader implements RemoteStringArray {
         throw new Exception("Index out of bounds");
     }
 
-    private String getElement(Integer i, Integer j) {
+    private String getElement(Integer i, Integer j) throws Exception {
         return boundRSAs.get(i).second.get(j);
     }
 
-    private void setElement(Integer i, Integer j, String val) {
+    private void setElement(Integer i, Integer j, String val) throws Exception {
         boundRSAs.get(i).second.set(j, val);
     }
 
-    public String get(Integer i, Integer clientId, LongStream tt) throws RemoteException {
-        if(!this.isWriteLocked(i, clientId, tt)) {
-            Tuple ij = this.getRSA(i);
-            return getElement(ij.first, ij.second);
+    public String get(Integer i, Integer clientId, Long start, Long end) throws RemoteException {
+        System.out.println("Attempting to get index " + i + " for client " + clientId + ". Timestamp: [" + start + " " + end + "]"); 
+        try {
+            if(isUnlockedForClient(i, clientId)) {
+                Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+                return getElement(ij.first, ij.second);
+            }
+            if(isUncertaintyLocked(i, start)) {
+                throw new RemoteException("Read request not granted since the given time stamp lies within the uncertainty interval. Timestamp: [" + start + " " + end + "]");
+            }
+            throw new RemoteException("Read request not granted since the element is locked. Try again.");
+        } catch(Exception e){
+            e.printStackTrace();
+            throw new RemoteException("An error occurred when attempting `get`.");
         }
-        throw new RemoteException("Read request not granted. Try again.");
     }
 
 
-    public void set(Integer i, String val, Integer clientId, LongStream tt) throws RemoteException {
-        if(this.isWriteLocked(i, clientId, tt)) {
-            Tuple ij = this.getRSA(i);
-            return setElement(ij.first, ij.second, val);
+    public void set(Integer i, String val, Integer clientId, Long start, Long end) throws RemoteException {
+        System.out.println("Attempting to set index " + i + " for client " + clientId + ". Timestamp: [" + start + " " + end + "]"); 
+        try {
+            if(isUnlockedForClient(i, clientId)) {
+                Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+                setElement(ij.first, ij.second, val);
+                return;
+            }
+            throw new RemoteException("Write request not granted since the client does not have a lock. Try again.");
+        } catch(Exception e){
+            e.printStackTrace();
+            throw new RemoteException("An error occurred when attempting `set`.");
         }
-        throw new RemoteException("Write request not granted. Try again.");
     }
 
+
+    public void startServer() throws RemoteException, AlreadyBoundException, NotBoundException {
+        RemoteStringArrayLeader stub = (RemoteStringArrayLeader) UnicastRemoteObject.exportObject(this, this.config.getPort());
+        Registry registry = null;
+
+        // Get an existing registry if it exists at the host:port.
+        // Otherwise, create a new one. This is here because I ran into an
+        // issue where using getRegistry would result in a error thrown by
+        // RMI for trying to attach to a registry that didn't exist.
+        try {
+            registry = LocateRegistry.getRegistry();
+        } catch (Exception e) {
+            System.out.println("Failed to locate registry, creating new one");
+            registry = LocateRegistry.createRegistry(this.config.getPort());
+        }
+        registry.bind(this.config.getName(), stub);
+        System.out.println("RSALeader created");
+    }
+
+    public void closeServer() throws RemoteException, NotBoundException {
+        Registry registry = LocateRegistry.getRegistry();
+        registry.unbind(this.config.getName());
+    }
+
+    public RSALeader(LeaderConfig config) {
+        this.config = config;
+        this.boundRSAs = new ArrayList<Tuple<String, RemoteStringArray>>();
+        this.locks = new ArrayList<List<Integer>>();
+        this.uncertaintyLocks = new ArrayList<List<Long>>();
+    }
 
     public static void main(String[] args) throws Exception {
 
+        if (args.length < 1) {
+            throw new Exception("usage: java RSAServer [config file]"); 
+        }
 
+        LeaderConfig config = new LeaderConfig(args[0]);
+        RSALeader rsae = new RSALeader(config);
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    rsae.closeServer();
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        rsae.startServer();
 
     }
 
