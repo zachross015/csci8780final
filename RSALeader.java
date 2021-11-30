@@ -23,23 +23,22 @@ public class RSALeader implements RemoteStringArrayLeader {
     List<List<Integer>> locks;
     List<List<Long>> uncertaintyLocks;
 
-    private Boolean isUnlockedForClient(Integer i, Integer clientId) throws Exception {
+    private Boolean isUnlockedForClient(Integer i, Integer clientId) throws RemoteException, ArrayIndexOutOfBoundsException {
         Tuple<Integer, Integer> ij = this.getRSAIndices(i);
         Integer lock = locks.get(ij.first).get(ij.second);
         return lock.equals(clientId) || lock.equals(-1);
     }
 
-    private Boolean isUncertaintyLocked(Integer i, Long start) throws Exception {
+    private Boolean isUncertaintyLocked(Integer i, Long start) throws RemoteException, ArrayIndexOutOfBoundsException {
         Tuple<Integer, Integer> ij = this.getRSAIndices(i);
         Long ul = uncertaintyLocks.get(ij.first).get(ij.second);
         return start.compareTo(ul) < 0;
     }
 
     public void requestWriteLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException {
-        try {
             Tuple<Integer, Integer> ij = this.getRSAIndices(i);
             Integer lock = locks.get(ij.first).get(ij.second);
-            if(isUnlockedForClient(i, clientId) && !lock.equals(-1)) {
+            if(!isUnlockedForClient(i, clientId) && !lock.equals(-1)) {
                 throw new RemoteException("Unable to grant RW lock: another client already has a lock on this element.");
             } else if(isUncertaintyLocked(i, start)) {
                 throw new RemoteException("Unable to grant RW lock: time range is within the current uncertainty.");
@@ -47,23 +46,16 @@ public class RSALeader implements RemoteStringArrayLeader {
             uncertaintyLocks.get(ij.first).set(ij.second, end);
             locks.get(ij.first).set(ij.second, clientId);
             System.out.println("Lock granted for index " + i + ". Timestamp: [" + start + " " + end + "]");
-        } catch(Exception e) {
-            throw new RemoteException("Error occurred when attempting to grant RW lock.");
-        }
     }
 
     public void releaseLock(Integer i, Integer clientId, Long start, Long end) throws RemoteException {
-        try {
-            Tuple<Integer, Integer> ij = this.getRSAIndices(i);
-            if(!locks.get(ij.first).get(ij.second).equals(clientId)) {
-                throw new RemoteException("Unable to release lock: client was not locked to this in the first place.");
-            }
-            uncertaintyLocks.get(ij.first).set(ij.second, end);
-            locks.get(ij.first).set(ij.second, -1);
-            System.out.println("Lock released for index " + i + ". Timestamp: [" + start + " " + end + "]");
-        } catch(Exception e) {
-            throw new RemoteException("Error occurred when attempting to release RW lock.");
+        Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+        if(!locks.get(ij.first).get(ij.second).equals(clientId)) {
+            throw new RemoteException("Unable to release lock: client was not locked to this in the first place.");
         }
+        uncertaintyLocks.get(ij.first).set(ij.second, end);
+        locks.get(ij.first).set(ij.second, -1);
+        System.out.println("Lock released for index " + i + ". Timestamp: [" + start + " " + end + "]");
     }
 
     public void bind(String name, RemoteStringArray rsa) throws RemoteException {
@@ -110,7 +102,7 @@ public class RSALeader implements RemoteStringArrayLeader {
     }
 
 
-    private Tuple<Integer, Integer> getRSAIndices(int j) throws Exception {
+    private Tuple<Integer, Integer> getRSAIndices(int j) throws RemoteException {
         int k = 0;
         for (int i = 0; i < boundRSAs.size(); i++) {
             RemoteStringArray elem = boundRSAs.get(i).second;
@@ -121,14 +113,14 @@ public class RSALeader implements RemoteStringArrayLeader {
             j -= n;
             k++;
         }
-        throw new Exception("Index out of bounds");
+        throw new ArrayIndexOutOfBoundsException("Index out of bounds");
     }
 
-    private String getElement(Integer i, Integer j) throws Exception {
+    private String getElement(Integer i, Integer j) throws RemoteException {
         return boundRSAs.get(i).second.get(j);
     }
 
-    private void setElement(Integer i, Integer j, String val) throws Exception {
+    private void setElement(Integer i, Integer j, String val) throws RemoteException {
         boundRSAs.get(i).second.set(j, val);
     }
 
@@ -144,7 +136,7 @@ public class RSALeader implements RemoteStringArrayLeader {
             }
             throw new RemoteException("Read request not granted since the element is locked. Try again.");
         } catch(Exception e){
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             throw new RemoteException("An error occurred when attempting `get`.");
         }
     }
@@ -152,17 +144,12 @@ public class RSALeader implements RemoteStringArrayLeader {
 
     public void set(Integer i, String val, Integer clientId, Long start, Long end) throws RemoteException {
         System.out.println("Attempting to set index " + i + " for client " + clientId + ". Timestamp: [" + start + " " + end + "]"); 
-        try {
-            if(isUnlockedForClient(i, clientId)) {
-                Tuple<Integer, Integer> ij = this.getRSAIndices(i);
-                setElement(ij.first, ij.second, val);
-                return;
-            }
-            throw new RemoteException("Write request not granted since the client does not have a lock. Try again.");
-        } catch(Exception e){
-            e.printStackTrace();
-            throw new RemoteException("An error occurred when attempting `set`.");
+        if(isUnlockedForClient(i, clientId)) {
+            Tuple<Integer, Integer> ij = this.getRSAIndices(i);
+            setElement(ij.first, ij.second, val);
+            return;
         }
+        throw new RemoteException("Write request not granted since the client does not have a lock. Try again.");
     }
 
 
@@ -210,7 +197,7 @@ public class RSALeader implements RemoteStringArrayLeader {
                 try {
                     rsae.closeServer();
                 } catch(Exception e) {
-                    e.printStackTrace();
+                    System.out.println(e.getMessage());
                 }
             }
         });

@@ -40,7 +40,7 @@ public class StringArrayClient {
 		try {
 			System.out.println(this.leaderStub.getCapacity());
 		} catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
 			System.out.println("Failure to get array capacity");
 		}
 	}
@@ -54,33 +54,27 @@ public class StringArrayClient {
         lastError = error;
     }
 
-	void fetchElementRead(int i) {
-		try {
-            this.calculateDisplacedTime();
-            this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
-			System.out.println("Success to fetch element in R mode");
-		} catch (RemoteException e) {
-            e.printStackTrace();
-			System.out.println("Failure to fetch element in R mode");
-		}
+	void fetchElementRead(int i) throws RemoteException {
+        this.calculateDisplacedTime();
+        this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
+        System.out.println("Success to fetch element in R mode");
 	}
 
 
-	void fetchElementWrite(int i) {
-		try {
-            this.calculateDisplacedTime();
-			this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.start, this.end);
-            this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
-			System.out.println("Success to fetch element in R/W mode");
-		} catch (RemoteException e) {
-            e.printStackTrace();
-			System.out.println("Failure to fetch element in R/W mode");
-		}
+	void fetchElementWrite(int i) throws RemoteException {
+        this.calculateDisplacedTime();
+        this.leaderStub.requestWriteLock(i, this.cConfig.getId(), this.start, this.end);
+        this.element = this.leaderStub.get(i, this.cConfig.getId(), this.start, this.end);
+        System.out.println("Success to fetch element in R/W mode");
 	}
 
 	void printElement(int i) {
-        this.fetchElementRead(i);
-		System.out.println(this.element);
+        try {
+            this.fetchElementRead(i);
+            System.out.println(this.element);
+        } catch(RemoteException e) {
+            System.out.println(e.getMessage());
+        }
 	}
 
 	void concatenate(String str, int i) {
@@ -94,7 +88,7 @@ public class StringArrayClient {
             this.leaderStub.set(i, this.mutated_element, this.cConfig.getId(), this.start, this.end);
             this.element = this.mutated_element;
 		} catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
 			System.out.println("Failure to writeback");
 		}
 	}
@@ -106,7 +100,7 @@ public class StringArrayClient {
 			this.element=null;
 			this.mutated_element=null;
 		} catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
 			System.out.println("Failed to release lock -- check server connection");
 		}
 	}
@@ -188,13 +182,17 @@ public class StringArrayClient {
             System.out.println("release     - Releases the lock for the element at the given index.");
             System.out.println("concatenate - Appends the given value to the value at the given index.");
 			while (!terminated) {
+                try {
 				line = input.nextLine();
                 terminated = arrClient.handleInput(line);
+                } catch(RemoteException e) {
+                    System.out.println(e.getMessage());
+                }
 			}
 			input.close();
 
         } catch(Exception e){
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
 
 	}

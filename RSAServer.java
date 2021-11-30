@@ -108,7 +108,7 @@ public class RSAServer implements RemoteStringArray {
                 try {
                     rsae.closeServer();
                 } catch(Exception e) {
-                    e.printStackTrace();
+                    System.out.println(e.getMessage());
                 }
             }
         });
